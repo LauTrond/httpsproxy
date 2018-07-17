@@ -35,7 +35,7 @@ curl 的 -k 参数可以忽略证书认证。如果要让客户端手动信任�
 
 ## 应用
 
-ProxyServer和HttpsExtractor是本项目的核心组件，
+ProxyServer和HttpsHijacker是本项目的核心组件，
 example.go含有基本的使用方法，
 以上示例使用的SimpleListenAndServe就在example.go里。
 你的项目中可能有更多的不同需求：
@@ -46,5 +46,5 @@ example.go含有基本的使用方法，
 - 采集日志；
 - 显示请求内容。
 
-都可以以本项目为基础，ProxyServer和HttpsExtractor设计有多个可选参数。
+都可以以本项目为基础，ProxyServer和HHttpsHijacker设计有多个可选参数。
 
