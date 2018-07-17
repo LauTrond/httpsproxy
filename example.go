@@ -27,19 +27,19 @@ func ListenAndServe(addr string, rootCerPem, rootKeyPem []byte) error {
 		LocalHandler: http.DefaultServeMux,
 	}
 
-	extractor := &HttpsExtractor{
-		RootCerPem: rootCerPem,
-		RootPkPem: rootKeyPem,
-		ProxyHandler: http.HandlerFunc(proxyServer.ServeHttpProxy),
-	}
-	proxyServer.TunnelHandler = extractor
-	go extractor.Serve() //直到调用Shutdown，Serve是不会返回的
+	hijacker := NewHttpsHijacker(
+		http.HandlerFunc(proxyServer.ServeHttpProxy),
+		rootCerPem, rootKeyPem,
+	)
+	proxyServer.TunnelHandler = hijacker
+
+	go hijacker.Serve() //直到调用Shutdown，Serve是不会返回的
 
 	err = http.ListenAndServe(addr, proxyServer)
 
 	ctxShutdown,cancelCtx := context.WithTimeout(context.Background(), time.Second)
 	defer cancelCtx()
-	extractor.Shutdown(ctxShutdown)
+	hijacker.Shutdown(ctxShutdown)
 
 	return err
 }

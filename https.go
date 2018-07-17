@@ -168,6 +168,14 @@ func (vh *virtualHost) Expired() bool {
 	return time.Now().After(vh.deadline)
 }
 
+func NewHttpsHijacker(handler http.Handler, rootCerPem, rootPkPem []byte) *HttpsHijacker {
+	return &HttpsHijacker{
+		RootCerPem: rootCerPem,
+		RootPkPem: rootPkPem,
+		ProxyHandler: handler,
+	}
+}
+
 //这是一个通过中间人攻击解包HTTPS的模块
 //1. 赋值RootCerPem, RootPkPem自签发根证书、
 //   赋值ProxyHandler处理后续的HTTP请求。
@@ -178,17 +186,17 @@ func (vh *virtualHost) Expired() bool {
 //
 // 模块使用RootCerPem、RootPkPem签发hostname的证书，并对c进行服务端TLS握手。
 // 第一次调用ProxyHandler需要签发证书，耗时约1秒。模块会缓存证书。
-type HttpsExtractor struct {
+type HttpsHijacker struct {
 	//根证书
 	RootCerPem, RootPkPem []byte
 
 	//处理代理请求的回调。 ServeHTTP(w,r): r.URI 是包含网站名的完整URL。
 	ProxyHandler http.Handler
 
-	//HttpServer的各种设置（例如超时）会被使用，Handler无效。
+	//可选参数，HttpServer的各种设置（例如超时）会被使用，Handler无效。
 	HttpServer *http.Server
 
-	//证书缓存
+	//可选参数，证书缓存
 	//如果为nil，首次启用时初始化为 NewLRUCache(1000)
 	VirtualHostCache Cache
 
@@ -203,11 +211,11 @@ type HttpsExtractor struct {
 	handleConnFunc func(c net.Conn)error
 }
 
-func (e *HttpsExtractor) checkInit() {
+func (e *HttpsHijacker) checkInit() {
 	e.initOnce.Do(e.init)
 }
 
-func (e *HttpsExtractor) init() {
+func (e *HttpsHijacker) init() {
 	if e.VirtualHostCache == nil {
 		e.VirtualHostCache = NewLRUCache(1000)
 	}
@@ -224,18 +232,18 @@ func (e *HttpsExtractor) init() {
 	e.listener,e.handleConnFunc = VirtualListen()
 }
 
-func (e *HttpsExtractor) Serve() error {
+func (e *HttpsHijacker) Serve() error {
 	e.checkInit()
 	return e.httpServer.Serve(e.listener)
 }
 
-func (e *HttpsExtractor) Shutdown(ctx context.Context) error {
+func (e *HttpsHijacker) Shutdown(ctx context.Context) error {
 	e.checkInit()
 	return e.httpServer.Shutdown(ctx)
 }
 
 //实现TunnelHandler
-func (e *HttpsExtractor) HandleTunnel(c net.Conn, hostname string) error {
+func (e *HttpsHijacker) HandleTunnel(c net.Conn, hostname string) error {
 	e.checkInit()
 	clientAddr := c.RemoteAddr().String()
 	err := e.putDst(clientAddr, hostname)
@@ -250,14 +258,14 @@ func (e *HttpsExtractor) HandleTunnel(c net.Conn, hostname string) error {
 	return e.handleConnFunc(c)
 }
 
-func (e *HttpsExtractor) getCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+func (e *HttpsHijacker) getCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	hostPattern := hostPatternOf(hello.ServerName)
 	vh := e.getVirtualHost(hostPattern)
 	<-vh.ready
 	return vh.cert, vh.err
 }
 
-func (e *HttpsExtractor) getVirtualHost(hostPattern string) *virtualHost {
+func (e *HttpsHijacker) getVirtualHost(hostPattern string) *virtualHost {
 	return e.VirtualHostCache.GetOrNew(hostPattern, func() interface{} {
 		ready := make(chan struct{})
 		vh := &virtualHost{
@@ -277,7 +285,7 @@ func (e *HttpsExtractor) getVirtualHost(hostPattern string) *virtualHost {
 	}).(*virtualHost)
 }
 
-func (e *HttpsExtractor) putDst(clientAddr, host string) error {
+func (e *HttpsHijacker) putDst(clientAddr, host string) error {
 	e.mtx.Lock()
 	defer e.mtx.Unlock()
 
@@ -288,13 +296,13 @@ func (e *HttpsExtractor) putDst(clientAddr, host string) error {
 	return nil
 }
 
-func (e *HttpsExtractor) removeDst(clientAddr string) {
+func (e *HttpsHijacker) removeDst(clientAddr string) {
 	e.mtx.Lock()
 	defer e.mtx.Unlock()
 	delete(e.dst, clientAddr)
 }
 
-func (e *HttpsExtractor) getDst(clientAddr string) (string,bool) {
+func (e *HttpsHijacker) getDst(clientAddr string) (string,bool) {
 	e.mtx.RLock()
 	defer e.mtx.RUnlock()
 
@@ -302,7 +310,7 @@ func (e *HttpsExtractor) getDst(clientAddr string) (string,bool) {
 	return host,ok
 }
 
-func (e *HttpsExtractor) serveHTTP(w http.ResponseWriter, r *http.Request) {
+func (e *HttpsHijacker) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	dst,ok := e.getDst(r.RemoteAddr)
 	if !ok {
 		http.Error(w, "no destination for client address",
