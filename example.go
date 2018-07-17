@@ -16,7 +16,11 @@ func SimpleListenAndServe(addr string) error {
 	http.Handle("/rootca", &FileHandler{
 		ContentType : "text/plain",
 		Data : rootCerPem,
-	})
+	}
+
+
+
+
 
 	return ListenAndServe(addr, rootCerPem, rootKeyPem)
 }
