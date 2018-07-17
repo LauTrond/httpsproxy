@@ -1,8 +1,8 @@
 # HTTPS解密代理
 
-轻量级的HTTPS连接解密代理，传入一个监听地址就解决所有问题，包括生成根证书。
+轻量级的HTTPS解密代理，传入一个监听地址就解决所有问题，包括生成根证书。
 
-Lightweight HTTPS decrypting proxy.
+Lightweight HTTPS hijacking proxy.
 
 Golang 1.10+
 
