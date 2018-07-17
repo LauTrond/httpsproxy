@@ -22,20 +22,21 @@ func SimpleListenAndServe(addr string) error {
 }
 
 func ListenAndServe(addr string, rootCerPem, rootKeyPem []byte) error {
-	var err error
+	//ProxyServer是代理服务，NewHttpsHijacker创建一个默认的HTTPS拦截实例。
+	//注意这里把ProxyServer.ServeHttpProxy赋值给HttpsHijacker.Handler，也把HttpsHijacker赋值给TunnelHandler。
 	proxyServer := &ProxyServer{
 		LocalHandler: http.DefaultServeMux,
 	}
-
 	hijacker := NewHttpsHijacker(
 		http.HandlerFunc(proxyServer.ServeHttpProxy),
 		rootCerPem, rootKeyPem,
 	)
 	proxyServer.TunnelHandler = hijacker
 
+	//HttpsHijacker内部包含一个的http.Server，需要调用Serve来启动、开始处理解密后的HTTPS连接。
 	go hijacker.Serve() //直到调用Shutdown，Serve是不会返回的
 
-	err = http.ListenAndServe(addr, proxyServer)
+	err := http.ListenAndServe(addr, proxyServer)
 
 	ctxShutdown,cancelCtx := context.WithTimeout(context.Background(), time.Second)
 	defer cancelCtx()
