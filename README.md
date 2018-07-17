@@ -1,7 +1,3 @@
-	wenling		ymnlp
-[ethan:~/Documents/gitroot] cd woodpecker/
-[ethan:~/Documents/gitroot/woodpecker] ls
-source_import	sql
 # HTTPS解密代理
 
 轻量级的HTTPS解密代理，传入一个监听地址就解决所有问题，包括生成根证书。
