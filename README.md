@@ -1,3 +1,7 @@
+	wenling		ymnlp
+[ethan:~/Documents/gitroot] cd woodpecker/
+[ethan:~/Documents/gitroot/woodpecker] ls
+source_import	sql
 # HTTPS解密代理
 
 轻量级的HTTPS解密代理，传入一个监听地址就解决所有问题，包括生成根证书。
@@ -46,5 +50,5 @@ example.go含有基本的使用方法，
 - 采集日志；
 - 显示请求内容。
 
-都可以以本项目为基础，ProxyServer和HHttpsHijacker设计有多个可选参数。
+都可以以本项目为基础，ProxyServer和HttpsHijacker设计有多个可选参数。
 
