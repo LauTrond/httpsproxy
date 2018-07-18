@@ -25,7 +25,7 @@ Golang 1.10+
 
 上面这个简单示例每次都会签发新的TLS证书。启动示例后，用curl测试：
 
-	all_proxy=localhost:3128 curl -k http://news.baidu.com/guonei
+	all_proxy=localhost:3128 curl -k https://news.baidu.com/guonei
 
 注意请求地址中的路径/guonei出现在日志中，如果没有解密是不可能显示的。
 
