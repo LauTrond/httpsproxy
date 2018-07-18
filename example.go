@@ -13,7 +13,7 @@ func SimpleListenAndServe(addr string) error {
 	rootCerPem, rootKeyPem, err := SignRoot(time.Now().AddDate(1, 0, 0))
 	if err != nil { return err }
 
-	http.Handle("/rootca", &FileHandler{
+	http.Handle("/rootca.pem", &FileHandler{
 		ContentType : "text/plain",
 		Data : rootCerPem,
 	})
@@ -31,7 +31,7 @@ func ListenAndServe(addr string, rootCerPem, rootKeyPem []byte) error {
 		http.HandlerFunc(proxyServer.ServeHttpProxy),
 		rootCerPem, rootKeyPem,
 	)
-	proxyServer.TunnelHandler = hijacker
+	proxyServer.ConnectHandler = hijacker
 
 	//HttpsHijacker内部包含一个的http.Server，需要调用Serve来启动、开始处理解密后的HTTPS连接。
 	go hijacker.Serve() //直到调用Shutdown，Serve是不会返回的

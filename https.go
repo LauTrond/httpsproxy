@@ -103,60 +103,6 @@ func SignRoot(validUntil time.Time) (_cerPem, _keyPem []byte, _err error) {
 	return cerPem, keyPem, nil
 }
 
-type virtualListener struct {
-	closed chan struct{}
-	chanConn chan net.Conn
-}
-
-func (l *virtualListener) add(c net.Conn) error {
-	select {
-		case l.chanConn <- c:
-			return nil
-		case <-l.closed:
-			return fmt.Errorf("closed")
-	}
-}
-
-func (l *virtualListener) Accept() (net.Conn, error) {
-	select {
-		case c := <-l.chanConn:
-			return c, nil
-		case <-l.closed:
-			return nil, fmt.Errorf("closed")
-	}
-}
-
-func (l *virtualListener) Close() error {
-	select {
-	case <-l.closed:
-	default:
-			close(l.closed)
-	}
-	return nil
-}
-
-type virtualAddr struct{}
-
-func (virtualAddr) Network() string {
-	return "virtual"
-}
-
-func (virtualAddr) String() string {
-	return "virtual"
-}
-
-func (l *virtualListener) Addr() net.Addr {
-	return virtualAddr{}
-}
-
-func VirtualListen() (net.Listener, func(net.Conn)error) {
-	l := &virtualListener{
-		closed : make(chan struct{}),
-		chanConn : make(chan net.Conn),
-	}
-	return l, l.add
-}
-
 type virtualHost struct {
 	ready <-chan struct{}
 	cert *tls.Certificate
@@ -243,7 +189,7 @@ func (e *HttpsHijacker) Shutdown(ctx context.Context) error {
 }
 
 //实现TunnelHandler
-func (e *HttpsHijacker) HandleTunnel(c net.Conn, hostname string) error {
+func (e *HttpsHijacker) Tunnel(c net.Conn, hostname string) error {
 	e.checkInit()
 	clientAddr := c.RemoteAddr().String()
 	err := e.putDst(clientAddr, hostname)

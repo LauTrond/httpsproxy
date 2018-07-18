@@ -12,7 +12,7 @@ import (
 type ProxyServer struct {
 	//处理CONNECT方法时发起连接函数
 	//nil则禁用CONNECT方法
-	TunnelHandler TunnelHandler
+	ConnectHandler Tunneler
 
 	//处理http请求
 	//nil则使用http.DefaultTransport
@@ -27,7 +27,7 @@ func (s *ProxyServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.Header.Del("Proxy-Authorization")
 
 	if r.Method == "CONNECT" {
-		if s.TunnelHandler == nil {
+		if s.ConnectHandler == nil {
 			http.Error(w, "CONNECT method not allowed",
 				http.StatusMethodNotAllowed)
 		} else {
@@ -107,7 +107,7 @@ func (s *ProxyServer) handleTunneling(w http.ResponseWriter, r *http.Request) {
 	}
 	conn.SetDeadline(time.Time{})
 
-	err = s.TunnelHandler.HandleTunnel(conn, r.RequestURI)
+	err = s.ConnectHandler.Tunnel(conn, r.RequestURI)
 	if err != nil {
 		conn.Close()
 		log.Println(r.Method, r.RequestURI, "HandleTunnel:", err.Error())
