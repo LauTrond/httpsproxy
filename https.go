@@ -206,29 +206,29 @@ func (e *HttpsHijacker) Tunnel(c net.Conn, hostname string) error {
 
 func (e *HttpsHijacker) getCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	hostPattern := hostPatternOf(hello.ServerName)
-	vh := e.getVirtualHost(hostPattern)
+	vh := e.VirtualHostCache.GetOrNew(hostPattern, func() interface{} {
+		return e.newVirtualHost(hostPattern)
+	}).(*virtualHost)
 	<-vh.ready
 	return vh.cert, vh.err
 }
 
-func (e *HttpsHijacker) getVirtualHost(hostPattern string) *virtualHost {
-	return e.VirtualHostCache.GetOrNew(hostPattern, func() interface{} {
-		ready := make(chan struct{})
-		vh := &virtualHost{
-			ready : ready,
-			deadline: time.Now().AddDate(0,0,7),
-		}
-		go func() {
-			defer close(ready)
-			cerPem, pkPem, err:= SignHost(
-				hostPattern, e.RootCerPem, e.RootPkPem, vh.deadline.AddDate(0,0,7))
-			if err != nil { vh.err = err ; return }
-			tlsCert, err := tls.X509KeyPair(cerPem,pkPem)
-			if err != nil { vh.err = err ; return }
-			vh.cert = &tlsCert
-		}()
-		return vh
-	}).(*virtualHost)
+func (e *HttpsHijacker) newVirtualHost(hostPattern string) *virtualHost {
+	ready := make(chan struct{})
+	vh := &virtualHost{
+		ready : ready,
+		deadline: time.Now().AddDate(0,0,7),
+	}
+	go func() {
+		defer close(ready)
+		cerPem, pkPem, err:= SignHost(
+			hostPattern, e.RootCerPem, e.RootPkPem, vh.deadline.AddDate(0,0,7))
+		if err != nil { vh.err = err ; return }
+		tlsCert, err := tls.X509KeyPair(cerPem,pkPem)
+		if err != nil { vh.err = err ; return }
+		vh.cert = &tlsCert
+	}()
+	return vh
 }
 
 func (e *HttpsHijacker) putDst(clientAddr, host string) error {
