@@ -47,7 +47,7 @@ func SignHost(hostname string, rootCerPem, rootKeyPem []byte, validUntil time.Ti
 		cer.DNSNames = []string{ hostname }
 	}
 
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	key, err := rsa.GenerateKey(rand.Reader, 512)
 	if err != nil { return nil, nil, err }
 
 	keyPem := pem.EncodeToMemory(&pem.Block{
@@ -84,7 +84,7 @@ func SignRoot(validUntil time.Time) (_cerPem, _keyPem []byte, _err error) {
 		ExtKeyUsage: []x509.ExtKeyUsage{ x509.ExtKeyUsageServerAuth },
 	}
 
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	key, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil { return nil, nil, err }
 
 	keyPem := pem.EncodeToMemory(&pem.Block{
